@@ -1,0 +1,16 @@
+**/target/
+runtime/
+output/
+logs/
+.env
+.env.*
+.idea/
+*.iml
+*.log
+evidencias/
+entrega/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks

@@ -1,0 +1,156 @@
+x-cloud: &cloud
+  CLOUD_ENABLED: "true"
+  CONFIG_IMPORT: configserver:http://config-server:8888
+  INFRA_PASSWORD: ${INFRA_PASSWORD:?Ejecuta scripts/iniciar-canales.ps1}
+  EUREKA_URL: http://infra:${INFRA_PASSWORD}@discovery-server:8761/eureka/
+services:
+  config-server:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: config-server
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8888
+      INFRA_PASSWORD: ${INFRA_PASSWORD}
+    ports:
+      - "127.0.0.1:8888:8888"
+    mem_limit: 384m
+  discovery-server:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: discovery-server
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8761
+      INFRA_PASSWORD: ${INFRA_PASSWORD}
+    ports:
+      - "127.0.0.1:8761:8761"
+    mem_limit: 512m
+  auth-server:
+    environment:
+      EFT_CHANNELS_ENABLED: "true"
+      EFT_CHANNELS_CUSTOMER_ID: ${DEMO_CUSTOMER_ID}
+      EFT_CHANNELS_WEB_SECRET: ${WEB_CHANNEL_SECRET}
+      EFT_CHANNELS_MOVIL_SECRET: ${MOVIL_CHANNEL_SECRET}
+      EFT_CHANNELS_CAJERO_SECRET: ${CAJERO_CHANNEL_SECRET}
+      EFT_CHANNELS_WEB_INTERNAL_SECRET: ${WEB_INTERNAL_SECRET}
+      EFT_CHANNELS_MOVIL_INTERNAL_SECRET: ${MOVIL_INTERNAL_SECRET}
+      EFT_CHANNELS_CAJERO_INTERNAL_SECRET: ${CAJERO_INTERNAL_SECRET}
+  clientes:
+    environment:
+      <<: *cloud
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+  cuentas:
+    environment:
+      <<: *cloud
+      DEPENDENCY_URL: http://clientes
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+  pagos:
+    environment:
+      <<: *cloud
+      DEPENDENCY_URL: http://cuentas
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+  bff-web:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: bff-web
+    environment:
+      <<: *cloud
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8201
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+      AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
+      INTERNAL_SECRET: ${WEB_INTERNAL_SECRET}
+    ports:
+      - "127.0.0.1:8201:8201"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      pagos:
+        condition: service_healthy
+    mem_limit: 384m
+  bff-movil:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: bff-movil
+    environment:
+      <<: *cloud
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8202
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+      AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
+      INTERNAL_SECRET: ${MOVIL_INTERNAL_SECRET}
+    ports:
+      - "127.0.0.1:8202:8202"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      pagos:
+        condition: service_healthy
+    mem_limit: 384m
+  bff-cajero:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: bff-cajero
+    environment:
+      <<: *cloud
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8203
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+      AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
+      INTERNAL_SECRET: ${CAJERO_INTERNAL_SECRET}
+    ports:
+      - "127.0.0.1:8203:8203"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      pagos:
+        condition: service_healthy
+    mem_limit: 384m
+  clientes-replica:
+    profiles: ["escala"]
+    image: fin-legacy-eft-clientes
+    environment:
+      <<: *cloud
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8101
+      DB_URL: jdbc:postgresql://db:5432/eft_clientes
+      DB_USER: eft_clientes
+      DB_PASSWORD: ${CLIENTES_DB_PASSWORD}
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+    depends_on:
+      clientes:
+        condition: service_healthy
+    mem_limit: 384m

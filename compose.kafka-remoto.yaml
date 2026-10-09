@@ -1,0 +1,26 @@
+# Aplicar despues de compose.kafka.yaml. Solo pagos y auditoria cambian de broker.
+services:
+  kafka:
+    profiles: ["kafka-local"]
+  pagos:
+    environment:
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP_REMOTO:?Define la direccion de Kafka en el laboratorio}
+    depends_on: !override
+      cuentas:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+  auditoria:
+    environment:
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP_REMOTO:?Define la direccion de Kafka en el laboratorio}
+    depends_on: !override
+      db:
+        condition: service_healthy
+      auth-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy

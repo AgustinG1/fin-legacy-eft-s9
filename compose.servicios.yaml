@@ -1,0 +1,91 @@
+services:
+  auth-server:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: auth-server
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 9100
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_KEY_FILE: /app/keys/signing-key.json
+      OPERATOR_SECRET: ${OPERATOR_SECRET:?Ejecuta scripts/iniciar-servicios.ps1}
+      CONSULTA_SECRET: ${CONSULTA_SECRET:?Ejecuta scripts/iniciar-servicios.ps1}
+      CUENTAS_INTERNAL_SECRET: ${CUENTAS_INTERNAL_SECRET:?Ejecuta scripts/iniciar-servicios.ps1}
+      PAGOS_INTERNAL_SECRET: ${PAGOS_INTERNAL_SECRET:?Ejecuta scripts/iniciar-servicios.ps1}
+    ports:
+      - "127.0.0.1:9100:9100"
+    volumes:
+      - eft-auth-keys:/app/keys
+    mem_limit: 384m
+  clientes:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: clientes
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8101
+      DB_URL: jdbc:postgresql://db:5432/eft_clientes
+      DB_USER: eft_clientes
+      DB_PASSWORD: ${CLIENTES_DB_PASSWORD:?Ejecuta scripts/iniciar-servicios.ps1}
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+    ports:
+      - "127.0.0.1:8101:8101"
+    depends_on:
+      db:
+        condition: service_healthy
+      auth-server:
+        condition: service_healthy
+    mem_limit: 384m
+  cuentas:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: cuentas
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8102
+      DB_URL: jdbc:postgresql://db:5432/eft_cuentas
+      DB_USER: eft_cuentas
+      DB_PASSWORD: ${CUENTAS_DB_PASSWORD:?Ejecuta scripts/iniciar-servicios.ps1}
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+      AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
+      INTERNAL_SECRET: ${CUENTAS_INTERNAL_SECRET:?Ejecuta scripts/iniciar-servicios.ps1}
+      DEPENDENCY_URL: http://clientes:8101
+    ports:
+      - "127.0.0.1:8102:8102"
+    depends_on:
+      clientes:
+        condition: service_healthy
+    mem_limit: 384m
+  pagos:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: pagos
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8103
+      DB_URL: jdbc:postgresql://db:5432/eft_pagos
+      DB_USER: eft_pagos
+      DB_PASSWORD: ${PAGOS_DB_PASSWORD:?Ejecuta scripts/iniciar-servicios.ps1}
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+      AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
+      INTERNAL_SECRET: ${PAGOS_INTERNAL_SECRET:?Ejecuta scripts/iniciar-servicios.ps1}
+      DEPENDENCY_URL: http://cuentas:8102
+    ports:
+      - "127.0.0.1:8103:8103"
+    depends_on:
+      cuentas:
+        condition: service_healthy
+    mem_limit: 384m
+volumes:
+  eft-auth-keys:

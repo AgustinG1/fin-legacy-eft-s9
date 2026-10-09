@@ -1,0 +1,40 @@
+name: fin-legacy-eft
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: eft
+      POSTGRES_USER: eft
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD antes de iniciar}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - eft-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eft -d eft"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  batch:
+    profiles: ["batch"]
+    build:
+      context: .
+      dockerfile: batch/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_URL: jdbc:postgresql://db:5432/eft
+      DB_USER: eft
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD antes de iniciar}
+      EFT_INTEREST_RATE: ${EFT_INTEREST_RATE:?Define la tasa del periodo, o 0.05 solo para prueba}
+      EFT_INTEREST_PERIOD: ${EFT_INTEREST_PERIOD:?Define el periodo, o TRIMESTRAL-DEMO solo para prueba}
+      BATCH_INPUT_DIR: /app/data/semana_3
+      BATCH_OUTPUT_DIR: /app/output
+    volumes:
+      - ./data:/app/data:ro
+      - eft-reports:/app/output
+volumes:
+  eft-postgres:
+  eft-reports:

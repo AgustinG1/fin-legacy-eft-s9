@@ -1,0 +1,31 @@
+services:
+  reportes:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: reportes
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8105
+      DB_URL: jdbc:postgresql://db:5432/eft
+      DB_USER: eft_reportes
+      DB_PASSWORD: ${REPORTES_DB_PASSWORD:?Ejecuta scripts/iniciar-reportes.ps1}
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+      CLOUD_ENABLED: "true"
+      CONFIG_IMPORT: configserver:http://config-server:8888
+      INFRA_PASSWORD: ${INFRA_PASSWORD}
+      EUREKA_URL: http://infra:${INFRA_PASSWORD}@discovery-server:8761/eureka/
+    ports:
+      - "127.0.0.1:8105:8105"
+    depends_on:
+      db:
+        condition: service_healthy
+      auth-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    mem_limit: 384m

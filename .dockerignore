@@ -1,0 +1,14 @@
+.git
+**/target
+runtime
+output
+logs
+.env
+.env.*
+evidencias
+entrega
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks

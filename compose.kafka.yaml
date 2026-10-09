@@ -1,0 +1,72 @@
+services:
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx384m"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - eft-kafka:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL","KAFKA_HEAP_OPTS='-Xms32m -Xmx64m' /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      start_period: 30s
+      retries: 12
+    mem_limit: 768m
+  pagos:
+    environment:
+      KAFKA_ENABLED: "true"
+      KAFKA_BOOTSTRAP: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+  auditoria:
+    build:
+      context: .
+      dockerfile: servicios/Dockerfile
+      args:
+        MODULE: auditoria
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8104
+      DB_URL: jdbc:postgresql://db:5432/eft_auditoria
+      DB_USER: eft_auditoria
+      DB_PASSWORD: ${AUDITORIA_DB_PASSWORD:?Ejecuta scripts/iniciar-eventos.ps1}
+      AUTH_ISSUER: http://localhost:9100
+      AUTH_JWKS: http://auth-server:9100/oauth2/jwks
+      CLOUD_ENABLED: "true"
+      CONFIG_IMPORT: configserver:http://config-server:8888
+      INFRA_PASSWORD: ${INFRA_PASSWORD}
+      EUREKA_URL: http://infra:${INFRA_PASSWORD}@discovery-server:8761/eureka/
+      KAFKA_ENABLED: "true"
+      KAFKA_BOOTSTRAP: kafka:9092
+    ports:
+      - "127.0.0.1:8104:8104"
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      auth-server:
+        condition: service_healthy
+    mem_limit: 384m
+volumes:
+  eft-kafka:

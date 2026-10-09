@@ -1,0 +1,24 @@
+CREATE TABLE IF NOT EXISTS account (
+ id VARCHAR(36) PRIMARY KEY,
+ customer_id VARCHAR(36) NOT NULL,
+ type VARCHAR(20) NOT NULL CHECK(type IN ('AHORRO','CORRIENTE')),
+ alias VARCHAR(80) NOT NULL,
+ currency VARCHAR(3) NOT NULL DEFAULT 'CLP',
+ status VARCHAR(10) NOT NULL CHECK(status IN ('ACTIVA','CERRADA')),
+ balance DECIMAL(19,2) NOT NULL DEFAULT 0 CHECK(balance>=0),
+ version BIGINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_account_customer ON account(customer_id);
+CREATE TABLE IF NOT EXISTS ledger_operation (
+ id VARCHAR(36) PRIMARY KEY,
+ fingerprint VARCHAR(64) NOT NULL,
+ receipt TEXT NOT NULL,
+ created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ledger_entry (
+ operation_id VARCHAR(36) NOT NULL REFERENCES ledger_operation(id),
+ account_id VARCHAR(36) NOT NULL REFERENCES account(id),
+ delta DECIMAL(19,2) NOT NULL,
+ balance_after DECIMAL(19,2) NOT NULL,
+ PRIMARY KEY(operation_id,account_id)
+);
