@@ -4,6 +4,7 @@ import java.time.Duration;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -12,10 +13,11 @@ import org.springframework.util.backoff.FixedBackOff;
 @Configuration @ConditionalOnProperty(name="eft.kafka.enabled",havingValue="true")
 public class KafkaConsuming {
     private final AuditStore store;
-    public KafkaConsuming(AuditStore store){this.store=store;}
+    private final String source;
+    public KafkaConsuming(AuditStore store,@Value("${eft.kafka.source}") String source){this.store=store;this.source=source;}
     @KafkaListener(topics="eft.pagos.v1",concurrency="3")
     public void receive(ConsumerRecord<String,String> record) {
-        store.record(record.key(),record.value(),record.topic(),record.partition(),record.offset());
+        store.record(source,record.key(),record.value(),record.topic(),record.partition(),record.offset());
     }
     @Bean DefaultErrorHandler errorHandler(KafkaTemplate<String,String> template) {
         var recoverer=new DeadLetterPublishingRecoverer(template,(r,e)->new TopicPartition("eft.pagos.v1.DLT",r.partition()));

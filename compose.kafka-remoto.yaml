@@ -14,6 +14,7 @@ services:
         condition: service_healthy
   auditoria:
     environment:
+      KAFKA_SOURCE: aws-lab
       KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP_REMOTO:?Define la direccion de Kafka en el laboratorio}
     depends_on: !override
       db:

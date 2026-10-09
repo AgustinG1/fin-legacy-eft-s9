@@ -40,6 +40,7 @@ try {
     $payment=@{id=[guid]::NewGuid().ToString();tipo='DEPOSITO';origen=$null;destino=$account;monto=100;concepto='Prueba sintetica laboratorio'}
     $result=Api POST 'http://localhost:8103/api/pagos' $token $payment
     ApiCheck 'Pago completado' $result.Body.estado 'COMPLETADO'
+    @{broker=$DireccionBroker;pagoId=$payment.id;cuentaId=$account} | ConvertTo-Json | Set-Content (Join-Path $evidence 'prueba.json') -Encoding utf8
     if ($EsperarRecuperacion) {
         ApiCheck 'Evento pendiente con broker detenido' (DbScalar eft_pagos "SELECT count(*) FROM payment_outbox WHERE event_id='$($payment.id)' AND published_at IS NULL") 1
         Write-Output 'Pago completado y evento pendiente. Ahora inicia Kafka en EC2 con: sudo docker start eft-kafka'
@@ -51,7 +52,7 @@ try {
         if ($response.Status -notin @(404,503)) {throw "Auditoria devolvio $($response.Status)"}
         Start-Sleep -Seconds 1
     }
-    if ($null -eq $audit) {throw 'El evento no llego en tres minutos. Revisa el broker remoto y su grupo de seguridad.'}
+    if ($null -eq $audit) {throw "El evento $($payment.id) no fue auditado en tres minutos. Revisa el outbox, los registros de auditoria y el topico eft.pagos.v1.DLT. Evidencia: $evidence"}
     ApiCheck 'Evento recibido desde el broker remoto' $audit.Body.evento.id $payment.id
     ApiCheck 'Importe recibido' $audit.Body.evento.comprobante.monto 100
     $published='0'

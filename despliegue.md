@@ -86,6 +86,8 @@ Debe aparecer `TcpTestSucceeded: True`. El script de conexión configura pagos y
 
 La salud HTTP de los servicios no basta para dar el despliegue por aprobado; la prueba de evento debe terminar sin errores. No ejecutar los scripts de inicio ni `verificar-eventos.ps1` durante esta comprobación, porque están destinados al broker local.
 
+Auditoría distingue las posiciones de Kafka con `KAFKA_SOURCE`: `local` para Docker y `aws-lab` para este laboratorio. Mantener ese identificador al reiniciar el mismo broker; usar uno distinto si se reemplaza por un clúster nuevo sin su historial. Las entregas anteriores se conservan como locales al migrar a `audit_delivery_v2`. Si el evento no aparece, revisar también el outbox y `eft.pagos.v1.DLT`; un rechazo de auditoría no implica un fallo de red.
+
 Si no conecta, comprobar que la IP de EC2 siga siendo la misma, que **Mi IP** corresponda a la conexión actual de Windows, que la regla sea TCP 9092 y que Kafka esté `Up`. Reiniciar EC2 puede cambiar su IP pública: el script actualiza la dirección anunciada al arrancar; repetir el comando de conexión local con la nueva IP.
 
 ## 5. Demostrar recuperación de un evento
