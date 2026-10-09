@@ -45,7 +45,7 @@ flowchart TB
   K --> AUD
 ```
 
-Solo Kafka se despliega en AWS, según la aclaración docente. Los demás componentes funcionan localmente. [despliegue.md](despliegue.md) contiene el procedimiento manual. El despliegue remoto queda pendiente de ejecución y validación; las pruebas locales no lo acreditan.
+Solo Kafka se despliega en AWS. Los demás componentes funcionan localmente. [despliegue.md](despliegue.md) contiene el procedimiento manual. El despliegue remoto queda pendiente de ejecución y validación; las pruebas locales no lo acreditan.
 
 ## Requisitos y decisiones
 
@@ -73,11 +73,13 @@ Validación local: 60 pruebas Maven aprobadas, 35 comprobaciones de reportes/API
 
 - `batch/`: jobs, validación, persistencia, reportes y pruebas.
 - `servicios/`: microservicios, BFF, OAuth2, Config Server, Eureka y pruebas.
-- `data/`: archivos de la docente.
+- `data/`: archivos CSV originales.
 - `scripts/`: inicio, comprobación, medición y conexión a Kafka remoto.
 - `infra/aws/iniciar-kafka.sh`: instalación de Kafka en una instancia del laboratorio.
 - `compose*.yaml`: configuración Docker local y conexión al broker remoto.
 
 ## Alcance de la demostración
 
-La tasa `0.05` y el período `TRIMESTRAL-DEMO` son valores configurables de prueba; no constituyen una regla confirmada por el docente. Las identidades de canal son sintéticas y utilizan `client_credentials`, sin inicio de sesión interactivo de personas. Los datos históricos se consultan por reportes: los CSV no permiten relacionar de forma fiable todos sus identificadores con cuentas operativas. El repositorio base no contiene programas COBOL ejecutables; la equivalencia se verifica mediante reglas, fixtures e invariantes, no mediante una ejecución del sistema legacy original.
+La tasa `0.05` y el período `TRIMESTRAL-DEMO` son valores configurables de prueba.
+
+Las identidades de canal son sintéticas y utilizan `client_credentials`, sin inicio de sesión interactivo de personas. Los datos históricos se consultan por reportes: los CSV no permiten relacionar de forma fiable todos sus identificadores con cuentas operativas. El repositorio base no contiene programas COBOL ejecutables; la equivalencia se verifica mediante reglas, fixtures e invariantes, no mediante una ejecución del sistema legacy original.

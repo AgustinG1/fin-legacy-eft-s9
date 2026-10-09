@@ -1,6 +1,6 @@
 # Desplegar Kafka en AWS Academy Learner Lab
 
-Solo Kafka se instala en AWS. Batch, bases de datos, microservicios y BFF permanecen en Docker local. Esta guía implementa el alcance indicado por el profesor; el tamaño de instancia y Session Manager son decisiones de esta implementación. El despliegue y la prueba remota están pendientes de ejecución manual.
+Solo Kafka se instala en AWS. Batch, bases de datos, microservicios y BFF permanecen en Docker local. El despliegue y la prueba remota están pendientes de ejecución manual.
 
 ## 1. Entrar al laboratorio de Duoc
 
