@@ -1,5 +1,12 @@
 Add-Type -AssemblyName System.Net.Http
-$http=[System.Net.Http.HttpClient]::new()
+if (-not ('LocalTls' -as [type])) {
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        Add-Type -Path (Join-Path $PSScriptRoot 'LocalTls.cs')
+    } else {
+        Add-Type -Path (Join-Path $PSScriptRoot 'LocalTls.cs') -ReferencedAssemblies System.Net.Http
+    }
+}
+$http=[LocalTls]::CreateClient((Join-Path $PSScriptRoot '../runtime/tls'))
 $http.Timeout=[TimeSpan]::FromSeconds(15)
 $checks=[System.Collections.Generic.List[object]]::new()
 function ApiResponse($response) {

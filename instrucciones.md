@@ -23,7 +23,7 @@ Abrir Docker Desktop y ejecutar:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/iniciar-reportes.ps1
 ```
 
-Este script inicia, en orden, PostgreSQL, autenticación, servicios de negocio, Config Server/Eureka, BFF, Kafka, auditoría, Batch y reportes. Crea tópicos y bases/usuarios separados; reportes recibe un usuario con permisos de lectura. Genera `.env` y claves RSA persistentes localmente. No publicar esos archivos ni la salida completa de `docker compose config`.
+Este script inicia, en orden, PostgreSQL, autenticación, servicios de negocio, Config Server/Eureka, BFF, Kafka, auditoría, Batch y reportes. Crea tópicos y bases/usuarios separados; reportes recibe un usuario con permisos de lectura. Genera `.env`, claves RSA de firma y tres certificados HTTPS persistentes localmente. No publicar esos archivos ni la salida completa de `docker compose config`.
 
 Las ejecuciones posteriores conservan datos y credenciales. `-SinConstruir` reutiliza imágenes existentes: usarlo solo cuando no se modificó el código. El inicio local restaura Kafka local; no ejecutarlo durante una comprobación del broker remoto.
 
@@ -32,9 +32,13 @@ Las ejecuciones posteriores conservan datos y credenciales. `-SinConstruir` reut
 | OAuth2 | http://localhost:9100 |
 | Clientes / cuentas / pagos | http://localhost:8101 / 8102 / 8103 |
 | Auditoría / reportes | http://localhost:8104 / 8105 |
-| BFF web / móvil / cajero | http://localhost:8201 / 8202 / 8203 |
+| BFF web / móvil / cajero | https://localhost:8201 / https://localhost:8202 / https://localhost:8203 |
 | Config Server / Eureka | http://localhost:8888 / 8761 |
 | PostgreSQL | localhost:5433 |
+
+Los BFF aceptan TLS 1.2/1.3 y rechazan HTTP. `scripts/preparar-https.ps1`, llamado automáticamente al iniciar canales, utiliza `keytool` en Docker para crear un PKCS12 por BFF con RSA de 3072 bits, SAN `localhost`/`127.0.0.1`/nombre del servicio y vigencia de 365 días. La contraseña se genera en `.env`; los almacenes se montan en solo lectura desde `runtime/tls`. Las ejecuciones posteriores reutilizan las claves.
+
+Las comprobaciones confían exclusivamente en el certificado público local correspondiente al puerto y verifican el nombre del servidor y las fechas. No desactivan globalmente la validación TLS ni agregan certificados al almacén de Windows. Un navegador puede advertir que el certificado es autofirmado: para la demostración utiliza los scripts, que tienen confianza explícita. La autenticación OAuth2 y las conexiones internas al backend permanecen por HTTP en el entorno local; no se afirma cifrado de extremo a extremo.
 
 Son APIs, no interfaces gráficas. Las rutas de negocio requieren token; abrirlas directamente en el navegador puede devolver 401. Kafka local solo escucha dentro de la red Docker.
 
@@ -44,7 +48,7 @@ Son APIs, no interfaces gráficas. Las rutas de negocio requieren token; abrirla
 mvn -B verify
 ```
 
-Resultado de referencia: 60 pruebas aprobadas. Incluyen reglas Batch, rollback, reinicio desde checkpoint, rangos sin filas perdidas/repetidas, transacciones contables, idempotencia, permisos, resiliencia, outbox, auditoría y reportes.
+Resultado de referencia: 62 pruebas aprobadas. Incluyen reglas Batch, rollback, reinicio desde checkpoint, rangos sin filas perdidas/repetidas, transacciones contables, idempotencia, permisos, resiliencia, outbox, auditoría y reportes.
 
 ## 3. Comprobar la integración local
 
@@ -52,12 +56,15 @@ Ejecutar secuencialmente, con los contenedores activos:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-servicios.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-canales.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-https.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-canales.ps1 -ProbarCaida -ProbarBalanceo
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-eventos.ps1 -ProbarCaida
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-reportes.ps1
 ```
 
 Se crean clientes, cuentas y operaciones sintéticos. Las pruebas de fallos interrumpen y restauran temporalmente servicios locales. No ejecutar simultáneamente ni durante la demostración AWS. Los CSV originales permanecen intactos. Los resultados se generan en `evidencias/` y los logs en `logs/`, ambos excluidos de Git.
+
+HTTPS comprueba 12 condiciones: certificado esperado, autenticación obligatoria, rechazo de HTTP y rechazo de certificado distinto en cada canal. Guarda `evidencias/https/verificacion.csv` y las huellas públicas en `certificados.csv`. Las comprobaciones de canales guardan sus resultados en `evidencias/canales-https/`, y las de reportes en `evidencias/semana3/reportes-https/`.
 
 Reportes comprueba 35 condiciones: conteos, paginación, acceso a los tres procesos mediante BFF web, autorización y prohibición de escritura en la base. Las pruebas de Kafka comprueban publicación, reentrega, DLT y recuperación de un evento pendiente sin un segundo movimiento contable.
 
@@ -128,4 +135,4 @@ Para detener los componentes locales conservando volúmenes:
 docker compose -f compose.yaml -f compose.servicios.yaml -f compose.canales.yaml -f compose.kafka.yaml -f compose.reportes.yaml stop
 ```
 
-La caída real de PostgreSQL y la integración AWS aún requieren comprobación específica. La demostración actual no implementa inicio de sesión interactivo, TLS entre componentes ni alta disponibilidad del broker único.
+La integración con Kafka en AWS se verificó el 9 de octubre de 2026, con 12 comprobaciones normales y 13 de recuperación. La caída real de PostgreSQL no se ensayó; su recuperación se verifica mediante fallos controlados en las pruebas Batch. La demostración no implementa inicio de sesión interactivo, TLS en las conexiones internas ni alta disponibilidad del broker único.

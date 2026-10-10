@@ -45,7 +45,7 @@ flowchart TB
   K --> AUD
 ```
 
-Solo Kafka se despliega en AWS. Los demás componentes funcionan localmente. [despliegue.md](despliegue.md) contiene el procedimiento manual. El despliegue remoto queda pendiente de ejecución y validación; las pruebas locales no lo acreditan.
+Solo Kafka se despliega en AWS. Los demás componentes funcionan localmente. [despliegue.md](despliegue.md) contiene el procedimiento manual. El despliegue remoto se verificó el 9 de octubre de 2026: 12 comprobaciones de publicación y consumo y 13 de recuperación tras detener e iniciar el broker, sin duplicar el depósito.
 
 ## Requisitos y decisiones
 
@@ -53,8 +53,10 @@ Solo Kafka se despliega en AWS. Los demás componentes funcionan localmente. [de
 |---|---|
 | Integridad y trazabilidad de la migración | Transacciones por bloque, archivo/fila de origen, rechazos y control de duplicados; conciliación de todas las entradas. |
 | Procesamiento concurrente reproducible | Rangos estables de 250 filas, hasta tres trabajadores y checkpoints; comparación secuencial/paralela. |
-| Acceso y respuestas por canal | Tres BFF con contratos diferentes, JWT, audiencias, scopes y comprobación de propiedad de cuentas. |
+| Acceso y respuestas por canal | Tres BFF por HTTPS con certificados locales, JWT, audiencias, scopes y comprobación de propiedad de cuentas. |
 | Recuperación de fallos temporales | Reintentos y reinicio limitado en Batch; circuit breaker y retry en consultas; pagos idempotentes, outbox y consumidor con deduplicación. |
+
+Los BFF se exponen en `https://localhost:8201`, `https://localhost:8202` y `https://localhost:8203`. Cada canal utiliza un certificado autofirmado propio, generado localmente y excluido de Git. Los scripts verifican certificado, nombre del servidor y vigencia sin instalar confianza global en Windows.
 
 Los BFF llaman al backend y no acceden directamente a las bases de datos. Reportes permite consultar la migración desde el BFF web administrativo. Kafka usa entrega al menos una vez y un tópico DLT para mensajes inválidos.
 
@@ -67,7 +69,7 @@ Los BFF llaman al backend y no acceden directamente a las bases de datos. Report
 | Estados anuales | 1000 | 304 | 696 | 0 |
 | Total | 3000 | 1117 | 1882 | 1 |
 
-Validación local: 60 pruebas Maven aprobadas, 35 comprobaciones de reportes/API/BFF y equivalencia de 14 CSV entre H2/PostgreSQL y uno/tres trabajadores. Los scripts generan los resultados de cada ejecución localmente.
+Validación local del 10 de octubre de 2026: 12 comprobaciones HTTPS, 50 comprobaciones de canales con balanceo y recuperación, 62 pruebas Maven aprobadas, 35 comprobaciones de reportes/API/BFF y equivalencia de 14 CSV entre H2/PostgreSQL y uno/tres trabajadores. Los scripts generan los resultados de cada ejecución localmente.
 
 ## Organización
 

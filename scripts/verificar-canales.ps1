@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 $composeFiles += @('-f',(Join-Path $projectRoot 'compose.canales.yaml'))
 . (Join-Path $PSScriptRoot 'http-local.ps1')
 $values=Read-EftEnvironment
-$evidence=Join-Path $projectRoot 'evidencias/canales'
+$evidence=Join-Path $projectRoot 'evidencias/canales-https'
 New-Item -ItemType Directory -Force $evidence | Out-Null
 $stopped=$false
 $replicaStarted=$false
@@ -30,8 +30,8 @@ try {
     $atm=(ApiToken 'canal-cajero' $values.CAJERO_CHANNEL_SECRET 'cajero.read cajero.write').Body.access_token
     $atmReader=(ApiToken 'canal-cajero' $values.CAJERO_CHANNEL_SECRET 'cajero.read').Body.access_token
     ApiCheck 'Canal movil no obtiene permiso cajero' (ApiToken 'canal-movil' $values.MOVIL_CHANNEL_SECRET 'cajero.write').Status 400
-    ApiCheck 'Web sin token' (Api GET 'http://localhost:8201/api/web/perfil' $null $null).Status 401
-    ApiCheck 'Token movil no entra a web' (Api GET 'http://localhost:8201/api/web/perfil' $mobile $null).Status 401
+    ApiCheck 'Web sin token' (Api GET 'https://localhost:8201/api/web/perfil' $null $null).Status 401
+    ApiCheck 'Token movil no entra a web' (Api GET 'https://localhost:8201/api/web/perfil' $mobile $null).Status 401
     ApiCheck 'Token web no accede directamente a cuentas' (Api GET 'http://localhost:8102/api/cuentas' $web $null).Status 401
     $customer=@{id=$values.DEMO_CUSTOMER_ID;documento="DEMO-$($values.DEMO_CUSTOMER_ID)";nombre='Cliente demo canales';email='canales@example.test'}
     ApiCheck 'Perfil demo preparado' (Api POST 'http://localhost:8101/api/clientes' $operator $customer).Status 201
@@ -46,8 +46,8 @@ try {
         else {$payment.tipo='RETIRO';$payment.origen=$values.DEMO_ACCOUNT_ID}
         ApiCheck 'Saldo demo preparado en 100000' (Api POST 'http://localhost:8103/api/pagos' $operator $payment).Status 200
     }
-    $webProfile=Api GET 'http://localhost:8201/api/web/perfil' $web $null
-    $summary=Api GET 'http://localhost:8202/api/movil/resumen' $mobile $null
+    $webProfile=Api GET 'https://localhost:8201/api/web/perfil' $web $null
+    $summary=Api GET 'https://localhost:8202/api/movil/resumen' $mobile $null
     ApiCheck 'Perfil web completo' $webProfile.Status 200
     ApiCheck 'Resumen movil disponible' $summary.Status 200
     ApiCheck 'Cliente identificado por token' $webProfile.Body.cliente.id $values.DEMO_CUSTOMER_ID
@@ -57,13 +57,13 @@ try {
     $webProfile.Text | Set-Content (Join-Path $evidence 'respuesta-web.json') -Encoding utf8
     $summary.Text | Set-Content (Join-Path $evidence 'respuesta-movil.json') -Encoding utf8
     [pscustomobject]@{web_bytes=$webProfile.Bytes;movil_bytes=$summary.Bytes} | Export-Csv (Join-Path $evidence 'tamano-respuestas.csv') -NoTypeInformation -Encoding UTF8
-    $atmUrl="http://localhost:8203/api/cajero/cuentas/$($values.DEMO_ACCOUNT_ID)"
+    $atmUrl="https://localhost:8203/api/cajero/cuentas/$($values.DEMO_ACCOUNT_ID)"
     ApiCheck 'Consulta saldo cajero' (Api GET "$atmUrl/saldo" $atm $null).Body.saldo 100000
     $foreignCustomer=[guid]::NewGuid().ToString();$foreignAccount=[guid]::NewGuid().ToString()
     ApiCheck 'Otro cliente de prueba' (Api POST 'http://localhost:8101/api/clientes' $operator @{id=$foreignCustomer;documento="DEMO-$foreignCustomer";nombre='Otro demo';email='otro@example.test'}).Status 201
     ApiCheck 'Cuenta ajena de prueba' (Api POST 'http://localhost:8102/api/cuentas' $operator @{id=$foreignAccount;clienteId=$foreignCustomer;tipo='AHORRO';alias='Ajena'}).Status 201
-    ApiCheck 'Cajero rechaza cuenta ajena' (Api GET "http://localhost:8203/api/cajero/cuentas/$foreignAccount/saldo" $atm $null).Status 403
-    ApiCheck 'Web rechaza cargo a cuenta ajena' (Api POST 'http://localhost:8201/api/web/pagos' $web @{id=[guid]::NewGuid().ToString();tipo='RETIRO';origen=$foreignAccount;monto=1000;concepto='Prueba ajena'}).Status 403
+    ApiCheck 'Cajero rechaza cuenta ajena' (Api GET "https://localhost:8203/api/cajero/cuentas/$foreignAccount/saldo" $atm $null).Status 403
+    ApiCheck 'Web rechaza cargo a cuenta ajena' (Api POST 'https://localhost:8201/api/web/pagos' $web @{id=[guid]::NewGuid().ToString();tipo='RETIRO';origen=$foreignAccount;monto=1000;concepto='Prueba ajena'}).Status 403
     ApiCheck 'Limite de retiro cajero' (Api POST "$atmUrl/retiros" $atm @{id=[guid]::NewGuid().ToString();monto=201000}).Status 400
     ApiCheck 'Denominacion de retiro cajero' (Api POST "$atmUrl/retiros" $atm @{id=[guid]::NewGuid().ToString();monto=1500}).Status 400
     $withdraw=@{id=[guid]::NewGuid().ToString();monto=10000}
@@ -85,7 +85,7 @@ try {
         # Eureka's read-only response cache and clients' local registry update asynchronously.
         # Observe routing, rather than assuming registration instantly updates every client.
         for($i=0;$i -lt 40;$i++) {
-            $balanced=Api GET 'http://localhost:8201/api/web/perfil' $web $null
+            $balanced=Api GET 'https://localhost:8201/api/web/perfil' $web $null
             ApiCheck "Balanceo respuesta $i" $balanced.Status 200
             if ($balanced.Upstream) {[void]$instances.Add($balanced.Upstream)}
             $samples.Add([pscustomobject]@{solicitud=$i;instancia_clientes=$balanced.Upstream;cliente=$balanced.Body.cliente.id})

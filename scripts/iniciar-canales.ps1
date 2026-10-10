@@ -18,6 +18,7 @@ try {
             Add-Content -LiteralPath '.env' -Value "$name=$($values[$name])" -Encoding utf8
         }
     }
+    & (Join-Path $PSScriptRoot 'preparar-https.ps1')
     & (Join-Path $PSScriptRoot 'iniciar-servicios.ps1') -SinConstruir:$SinConstruir
     $composeFiles += @('-f',(Join-Path $projectRoot 'compose.canales.yaml'))
     Invoke-EftCompose config --quiet

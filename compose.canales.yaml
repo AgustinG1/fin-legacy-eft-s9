@@ -76,12 +76,22 @@ services:
       <<: *cloud
       SERVER_ADDRESS: 0.0.0.0
       SERVER_PORT: 8201
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: file:/app/tls/bff-web.p12
+      SERVER_SSL_KEY_STORE_TYPE: PKCS12
+      SERVER_SSL_KEY_STORE_PASSWORD: ${BFF_TLS_PASSWORD:?Ejecuta scripts/preparar-https.ps1}
+      SERVER_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
+      EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED: "false"
+      EUREKA_INSTANCE_SECURE_PORT_ENABLED: "true"
+      EUREKA_INSTANCE_SECURE_PORT: 8201
       AUTH_ISSUER: http://localhost:9100
       AUTH_JWKS: http://auth-server:9100/oauth2/jwks
       AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
       INTERNAL_SECRET: ${WEB_INTERNAL_SECRET}
     ports:
       - "127.0.0.1:8201:8201"
+    volumes:
+      - ./runtime/tls/bff-web.p12:/app/tls/bff-web.p12:ro
     depends_on:
       config-server:
         condition: service_healthy
@@ -100,12 +110,22 @@ services:
       <<: *cloud
       SERVER_ADDRESS: 0.0.0.0
       SERVER_PORT: 8202
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: file:/app/tls/bff-movil.p12
+      SERVER_SSL_KEY_STORE_TYPE: PKCS12
+      SERVER_SSL_KEY_STORE_PASSWORD: ${BFF_TLS_PASSWORD:?Ejecuta scripts/preparar-https.ps1}
+      SERVER_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
+      EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED: "false"
+      EUREKA_INSTANCE_SECURE_PORT_ENABLED: "true"
+      EUREKA_INSTANCE_SECURE_PORT: 8202
       AUTH_ISSUER: http://localhost:9100
       AUTH_JWKS: http://auth-server:9100/oauth2/jwks
       AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
       INTERNAL_SECRET: ${MOVIL_INTERNAL_SECRET}
     ports:
       - "127.0.0.1:8202:8202"
+    volumes:
+      - ./runtime/tls/bff-movil.p12:/app/tls/bff-movil.p12:ro
     depends_on:
       config-server:
         condition: service_healthy
@@ -124,12 +144,22 @@ services:
       <<: *cloud
       SERVER_ADDRESS: 0.0.0.0
       SERVER_PORT: 8203
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: file:/app/tls/bff-cajero.p12
+      SERVER_SSL_KEY_STORE_TYPE: PKCS12
+      SERVER_SSL_KEY_STORE_PASSWORD: ${BFF_TLS_PASSWORD:?Ejecuta scripts/preparar-https.ps1}
+      SERVER_SSL_ENABLED_PROTOCOLS: TLSv1.2,TLSv1.3
+      EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED: "false"
+      EUREKA_INSTANCE_SECURE_PORT_ENABLED: "true"
+      EUREKA_INSTANCE_SECURE_PORT: 8203
       AUTH_ISSUER: http://localhost:9100
       AUTH_JWKS: http://auth-server:9100/oauth2/jwks
       AUTH_TOKEN_URI: http://auth-server:9100/oauth2/token
       INTERNAL_SECRET: ${CAJERO_INTERNAL_SECRET}
     ports:
       - "127.0.0.1:8203:8203"
+    volumes:
+      - ./runtime/tls/bff-cajero.p12:/app/tls/bff-cajero.p12:ro
     depends_on:
       config-server:
         condition: service_healthy

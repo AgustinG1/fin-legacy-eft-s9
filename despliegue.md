@@ -1,6 +1,6 @@
 # Desplegar Kafka en AWS Academy Learner Lab
 
-Solo Kafka se instala en AWS. Batch, bases de datos, microservicios y BFF permanecen en Docker local. El despliegue y la prueba remota están pendientes de ejecución manual.
+Solo Kafka se instala en AWS. Batch, bases de datos, microservicios y BFF permanecen en Docker local. El despliegue se realizó el 9 de octubre de 2026. La prueba normal aprobó 12 comprobaciones y la recuperación tras detener e iniciar Kafka aprobó 13, con el broker local detenido y sin duplicar el depósito. Estos pasos permiten reproducir la instalación; las evidencias no implican que la instancia permanezca encendida.
 
 ## 1. Entrar al laboratorio de Duoc
 
@@ -105,7 +105,7 @@ Después de aprobar la prueba anterior:
 4. En Session Manager: `sudo docker start eft-kafka`.
 5. La comprobación espera hasta tres minutos y debe detectar el evento, confirmar el outbox y verificar que el saldo no se duplicó.
 
-Guardar las dos ejecuciones y capturas del broker/tópicos para el informe y el video. No capturar credenciales, tokens ni detalles privados de la cuenta. No afirmar esta prueba como completada hasta ejecutarla.
+Guardar las dos ejecuciones y capturas del broker/tópicos para el informe y el video. No capturar credenciales, tokens ni detalles privados de la cuenta. Las evidencias de referencia están en `evidencias/aws/20261009-181253-799741ab` y `evidencias/aws/20261009-181414-f93555d2`; la segunda corresponde a la recuperación mostrada en el informe.
 
 ## 6. Terminar la demostración
 

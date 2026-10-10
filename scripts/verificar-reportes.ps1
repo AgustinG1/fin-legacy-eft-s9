@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'http-local.ps1')
 $composeFiles += @('-f',(Join-Path $projectRoot 'compose.canales.yaml'),'-f',(Join-Path $projectRoot 'compose.kafka.yaml'),'-f',(Join-Path $projectRoot 'compose.reportes.yaml'))
 $values=Read-EftEnvironment
-$evidence=Join-Path $projectRoot $(if($TodasSemanas){'evidencias/reportes'}else{'evidencias/semana3/reportes'})
+$evidence=Join-Path $projectRoot $(if($TodasSemanas){'evidencias/reportes-https'}else{'evidencias/semana3/reportes-https'})
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 Push-Location $projectRoot
 try {
@@ -39,7 +39,7 @@ try {
     ApiCheck 'Dataset sin ejecucion no disponible' (Api GET ("http://localhost:8105/api/reportes/"+('0'*64)+'/DAILY') $token $null).Status 404
     $web=$null
     for($attempt=0;$attempt -lt 60;$attempt++) {
-        $web=Api GET 'http://localhost:8201/api/web/migracion/resumen' $token $null
+        $web=Api GET 'https://localhost:8201/api/web/migracion/resumen' $token $null
         if($web.Status -eq 200) {break}
         if($web.Status -ne 503) {throw "BFF web devolvio $($web.Status)"}
         Start-Sleep -Seconds 2
@@ -48,14 +48,14 @@ try {
     ApiCheck 'Web conserva cantidad de datasets' @($web.Body).Count @($summary.Body).Count
     foreach($kind in @('DAILY','INTEREST','ANNUAL')) {
         $selected=@($summary.Body | Where-Object { $_.proceso -eq $kind -and $_.entrada -eq $expected[$kind][0] } | Sort-Object ejecucion -Descending)[0]
-        $page=Api GET "http://localhost:8201/api/web/migracion/$($selected.dataset)/${kind}?pagina=0&tamano=2" $token $null
+        $page=Api GET "https://localhost:8201/api/web/migracion/$($selected.dataset)/${kind}?pagina=0&tamano=2" $token $null
         ApiCheck "$kind datos migrados visibles desde BFF" $page.Status 200
         ApiCheck "$kind BFF preserva dataset de origen" $page.Body.resumen.dataset $selected.dataset
         ApiCheck "$kind BFF entrega dos registros validos" @($page.Body.filas).Count 2
         $page.Body | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $evidence "bff-$kind.json") -Encoding utf8
     }
     $channel=ApiToken 'canal-web' $values.WEB_CHANNEL_SECRET 'web.read'
-    ApiCheck 'Cliente de canal no ve migracion administrativa' (Api GET 'http://localhost:8201/api/web/migracion/resumen' $channel.Body.access_token $null).Status 403
+    ApiCheck 'Cliente de canal no ve migracion administrativa' (Api GET 'https://localhost:8201/api/web/migracion/resumen' $channel.Body.access_token $null).Status 403
     $ErrorActionPreference='Continue'
     try {
         & $dockerPath @composeFiles exec -T db psql -X -U eft -d eft -v ON_ERROR_STOP=1 -c 'SET ROLE eft_reportes; UPDATE legacy_row SET status=status WHERE 1=0;' *> (Join-Path $evidence 'escritura-denegada.txt')
